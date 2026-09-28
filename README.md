@@ -6,11 +6,6 @@ Multi-account web apps for [Omarchy](https://omarchy.org/) — adds a
 per-account profile directory to `omarchy webapp install`, so the same site
 can run under multiple logged-in accounts at the same time.
 
-Omarchy's plugin system (`omarchy plugin`) targets Quickshell UI components
-(bar widgets / panels / services) and cannot ship CLI commands, so this
-project ships as a **git repo + symlink install**: commands are linked into
-`~/.local/bin` and updating is just `git pull`.
-
 ## Install
 
 **Option 1 — automatic, via Omarchy's built-in AI agent:**
@@ -80,7 +75,7 @@ closed, its instance exits and the memory is released.
 
 ```lua
 -- ~/.config/hypr/bindings.lua
-o.bind SUPER+W, "omarchy launch or focus webapp 'whatsapp.com__-work' 'https://web.whatsapp.com/' --user-data-dir=" .. os.getenv("HOME") .. "/.local/share/omarchy/webapp-profiles/work --profile-directory=work"
+o.bind("SUPER + ALT + W", "WhatsApp (Work)", "omarchy-launch-or-focus-webapp 'whatsapp.com__-work' 'https://web.whatsapp.com/' --user-data-dir=" .. os.getenv("HOME") .. "/.local/share/omarchy/webapp-profiles/work --profile-directory=work")
 ```
 
 ## Update

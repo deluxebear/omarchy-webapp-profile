@@ -5,10 +5,6 @@
 多账号 Web App for [Omarchy](https://omarchy.org/) — 给 `omarchy webapp install`
 加上"独立 profile 目录"能力,让同一个网站可以多个账号同时登录。
 
-Omarchy 的插件系统(`omarchy plugin`)面向 Quickshell UI 组件(bar-widget /
-panel / service),不承载 CLI 命令,所以本项目采用 **git 仓库 + 符号链接安装**
-的形态:命令链接进 `~/.local/bin`,更新只需 `git pull`。
-
 ## 安装
 
 **方式一 — 自动,通过 Omarchy 内建 AI agent:**
@@ -72,7 +68,7 @@ omarchy-webapp-profile dir <profile>    # 打印数据目录路径
 
 ```lua
 -- ~/.config/hypr/bindings.lua
-o.bind SUPER+W, "omarchy launch or focus webapp 'whatsapp.com__-work' 'https://web.whatsapp.com/' --user-data-dir=" .. os.getenv("HOME") .. "/.local/share/omarchy/webapp-profiles/work --profile-directory=work"
+o.bind("SUPER + ALT + W", "WhatsApp (Work)", "omarchy-launch-or-focus-webapp 'whatsapp.com__-work' 'https://web.whatsapp.com/' --user-data-dir=" .. os.getenv("HOME") .. "/.local/share/omarchy/webapp-profiles/work --profile-directory=work")
 ```
 
 ## 更新
