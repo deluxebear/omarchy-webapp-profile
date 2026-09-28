@@ -13,6 +13,17 @@ project ships as a **git repo + symlink install**: commands are linked into
 
 ## Install
 
+**Option 1 — automatic, via Omarchy's built-in AI agent:**
+
+Open your agent (`omarchy agent`, or SUPER+SHIFT+CTRL+A to pick one), paste the
+repo URL and tell it to install itself:
+
+> Install https://github.com/deluxebear/omarchy-webapp-profile
+
+The agent clones the repo and runs `./install.sh` for you.
+
+**Option 2 — manually:**
+
 ```bash
 git clone https://github.com/deluxebear/omarchy-webapp-profile ~/Work/omarchy-webapp-profile
 cd ~/Work/omarchy-webapp-profile

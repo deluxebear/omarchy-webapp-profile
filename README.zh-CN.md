@@ -11,6 +11,17 @@ panel / service),不承载 CLI 命令,所以本项目采用 **git 仓库 + 符�
 
 ## 安装
 
+**方式一 — 自动,通过 Omarchy 内建 AI agent:**
+
+打开 agent(`omarchy agent`,或 SUPER+SHIFT+CTRL+A 选择一个),
+把仓库地址发给它,让它自行安装:
+
+> 安装 https://github.com/deluxebear/omarchy-webapp-profile
+
+agent 会自己 clone 仓库并执行 `./install.sh`。
+
+**方式二 — 手动:**
+
 ```bash
 git clone https://github.com/deluxebear/omarchy-webapp-profile ~/Work/omarchy-webapp-profile
 cd ~/Work/omarchy-webapp-profile
