@@ -5,6 +5,11 @@
 多账号 Web App for [Omarchy](https://omarchy.org/) — 给 `omarchy webapp install`
 加上"独立 profile 目录"能力,让同一个网站可以多个账号同时登录。
 
+[![演示视频:安装两个 WhatsApp 账号并排运行](docs/demo.jpg)](docs/demo.mp4)
+
+*演示(2:23,中英双语字幕):菜单向导 → 两个账号并排运行 → `list` / 窗口 class
+→ `remove --purge`。点击播放。*
+
 ## 安装
 
 **方式一 — 自动,通过 Omarchy 内建 AI agent:**

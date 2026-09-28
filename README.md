@@ -6,6 +6,11 @@ Multi-account web apps for [Omarchy](https://omarchy.org/) — adds a
 per-account profile directory to `omarchy webapp install`, so the same site
 can run under multiple logged-in accounts at the same time.
 
+[![Demo video: install two WhatsApp accounts and run them side by side](docs/demo.jpg)](docs/demo.mp4)
+
+*Demo (2:23, bilingual captions): menu wizard → two accounts side by side →
+`list` / window classes → `remove --purge`. Click to play.*
+
 ## Install
 
 **Option 1 — automatic, via Omarchy's built-in AI agent:**
