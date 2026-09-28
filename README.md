@@ -10,7 +10,7 @@ panel / service),不承载 CLI 命令,所以本项目采用 **git 仓库 + 符�
 ## 安装
 
 ```bash
-git clone <this-repo> ~/Work/omarchy-webapp-profile
+git clone https://github.com/deluxebear/omarchy-webapp-profile ~/Work/omarchy-webapp-profile
 cd ~/Work/omarchy-webapp-profile
 ./install.sh
 ```
