@@ -1,0 +1,240 @@
+#!/bin/bash
+
+# omarchy-webapp-profile - multi-account web apps for Omarchy
+#
+# Installs web apps that run in an isolated Chromium user-data-dir ("profile"),
+# so the same site can be logged into several accounts side by side.
+#
+# Desktop entries are created by the built-in `omarchy webapp install` via its
+# custom-exec argument, and their Exec lines still start with
+# `omarchy-launch-webapp`, so stock Omarchy tooling (removal, icon handling,
+# browser resolution, uwsm launch) keeps working untouched.
+#
+# Profiles live in ~/.local/share/omarchy/webapp-profiles/<name>/ and are
+# shared browser identities: apps installed with the same profile name share
+# cookies/logins, different names are fully separate accounts.
+
+set -e
+
+PROFILE_ROOT="$HOME/.local/share/omarchy/webapp-profiles"
+
+usage() {
+  cat <<EOF
+omarchy-webapp-profile - multi-account web apps
+
+Usage:
+  omarchy-webapp-profile install [name url icon profile [extra-flags...]]
+        Install a web app launcher that runs in its own profile directory.
+        No arguments starts an interactive wizard. icon "-" or empty fetches
+        the site icon automatically. extra-flags are appended to the browser
+        command.
+  omarchy-webapp-profile launch <profile> <url> [extra-flags...]
+        Open url in the given profile now, without a desktop entry.
+        First run starts logged out - sign in there once.
+  omarchy-webapp-profile list
+        Show installed profile web apps, their data dirs and disk usage.
+  omarchy-webapp-profile remove <name> [--purge]
+        Remove the launcher via omarchy webapp remove; --purge also deletes
+        its profile data directory.
+  omarchy-webapp-profile purge <profile> [--yes]
+        Delete a profile data directory (cookies, logins, cache).
+  omarchy-webapp-profile dir <profile>
+        Print the data directory path for a profile.
+
+Window matching:
+  Each account's app window gets a distinct, predictable class:
+      chrome-<origin>__-<profile>     e.g. chrome-web.whatsapp.com__-Work
+  Use it for Hyprland window rules and launch-or-focus keybindings:
+      o.bind SUPER+W, omarchy launch or focus webapp "web.whatsapp.com__-Work" https://web.whatsapp.com/ --user-data-dir=<dir> --profile-directory=Work
+
+Examples:
+  omarchy-webapp-profile install "WhatsApp (Work)" https://web.whatsapp.com/ - work
+  omarchy-webapp-profile install "Discord Alt" https://discord.com/app discord alt
+  omarchy-webapp-profile launch work https://web.whatsapp.com/
+  omarchy-webapp-profile remove "WhatsApp (Work)" --purge
+EOF
+}
+
+safe_profile_name() {
+  printf '%s\n' "$1" | tr '[:upper:]' '[:lower:]' |
+    sed 's/[^[:alnum:]]\+/-/g; s/^-//; s/-$//'
+}
+
+profile_dir() {
+  printf '%s/%s' "$PROFILE_ROOT" "$(safe_profile_name "$1")"
+}
+
+# Wizard step missing from the stock installer: pick the user-data-dir for
+# this app. Existing profiles can be reused so several apps share one login
+# identity; "Create new profile..." starts a fresh isolated account.
+choose_profile() {
+  local dirs=() pick
+  [[ -d $PROFILE_ROOT ]] && mapfile -t dirs < <(ls -1 "$PROFILE_ROOT" 2>/dev/null)
+  if ((${#dirs[@]})); then
+    pick=$(gum choose "${dirs[@]}" "Create new profile...")
+    [[ $pick == "Create new profile..." ]] && pick=""
+  fi
+  while [[ -z $pick ]]; do
+    pick=$(gum input --prompt "New profile name> " --placeholder "work")
+  done
+  printf '%s' "$pick"
+}
+
+cmd_install() {
+  local name url icon profile extra=""
+  if (($# == 0)); then
+    echo -e "\e[32mLet's create a new web app you can start with the app launcher.\nIt gets its own profile directory, so the same site can run multiple accounts.\e[0m"
+    name=$(gum input --prompt "Name> " --placeholder "My favorite web app")
+    url=$(gum input --prompt "URL> " --placeholder "https://example.com")
+    icon=$(gum input --prompt "Icon URL/name (empty = fetch from site)> " --placeholder "PNG icon URL or icon name")
+    profile=$(choose_profile)
+  elif (($# >= 4)); then
+    name=$1 url=$2 icon=$3 profile=$4
+    shift 4
+    extra="$*"
+  else
+    usage >&2
+    exit 1
+  fi
+
+  [[ -n $name && -n $url && -n $profile ]] || {
+    echo "Error: name, URL and profile are required." >&2
+    exit 1
+  }
+  [[ $icon == "-" ]] && icon=""
+  [[ -n $(safe_profile_name "$profile") ]] || {
+    echo "Error: invalid profile name: $profile" >&2
+    exit 1
+  }
+
+  local dir
+  dir=$(profile_dir "$profile")
+
+  # Desktop Entry Exec field codes use %, so a literal % in the URL (percent-
+  # encodings like %20) must be doubled when written into the .desktop file.
+  # Direct `launch` takes argv and needs no escaping.
+  # --profile-directory makes the internal profile dir match the account name,
+  # so each account's window class is chrome-<origin>__-<profile> and Hyprland
+  # rules / launch-or-focus can tell the accounts apart.
+  local exec_url=${url//%/%%}
+  local safe
+  safe=$(safe_profile_name "$profile")
+  local exec="omarchy-launch-webapp $exec_url --user-data-dir=$dir --profile-directory=$safe${extra:+ $extra}"
+
+  omarchy webapp install "$name" "$url" "$icon" "$exec"
+
+  echo
+  echo "Installed '$name' with profile dir:"
+  echo "  $dir"
+  echo "First launch starts logged out - sign in with the second account there."
+  echo "Find it in the app launcher (SUPER + SPACE)."
+}
+
+cmd_launch() {
+  (($# >= 2)) || {
+    usage >&2
+    exit 1
+  }
+  local profile=$1 url=$2
+  shift 2
+  exec omarchy-launch-webapp "$url" \
+    "--user-data-dir=$(profile_dir "$profile")" \
+    "--profile-directory=$(safe_profile_name "$profile")" "$@"
+}
+
+cmd_list() {
+  local f exec_line name url dir profile size found=0
+  shopt -s nullglob
+  for f in "$HOME"/.local/share/applications/*.desktop; do
+    exec_line=$(grep -m1 '^Exec=omarchy-launch-webapp ' "$f" || true)
+    [[ $exec_line == *"--user-data-dir=$PROFILE_ROOT/"* ]] || continue
+    name=$(basename "$f" .desktop)
+    url=$(awk '{print $2}' <<<"$exec_line")
+    dir=$(grep -o -- '--user-data-dir=[^ ]*' <<<"$exec_line" | head -1 | cut -d= -f2-)
+    profile=$(basename "$dir")
+    if [[ -d $dir ]]; then
+      size=$(du -sh "$dir" 2>/dev/null | cut -f1)
+    else
+      size="-"
+    fi
+    printf '%s\n  profile: %s  data: %s  %s\n  url:     %s\n' "$name" "$profile" "$size" "$dir" "$url"
+    found=1
+  done
+  (($found)) || echo "No profile web apps installed yet. Try: omarchy-webapp-profile install"
+}
+
+cmd_remove() {
+  (($# >= 1)) || {
+    usage >&2
+    exit 1
+  }
+  local name=$1
+  shift
+  local purge=false
+  [[ ${1:-} == --purge ]] && purge=true
+
+  # Recover the profile dir from the launcher before the built-in remover
+  # deletes it. Only purge dirs inside our own root.
+  local desktop="$HOME/.local/share/applications/$name.desktop"
+  local dir=""
+  if [[ -f $desktop ]]; then
+    dir=$(grep -m1 -o -- '--user-data-dir=[^ ]*' "$desktop" | head -1 | cut -d= -f2- || true)
+  fi
+
+  omarchy webapp remove "$name"
+
+  if [[ -n $dir && $dir == "$PROFILE_ROOT"/* && -d $dir ]]; then
+    if $purge; then
+      rm -rf "$dir"
+      echo "Purged profile data: $dir"
+    else
+      echo "Profile data kept: $dir"
+      echo "Purge it with: omarchy-webapp-profile purge $(basename "$dir")"
+    fi
+  fi
+}
+
+cmd_purge() {
+  (($# >= 1)) || {
+    usage >&2
+    exit 1
+  }
+  local profile=$1
+  shift
+  local assume_yes=false
+  [[ ${1:-} == --yes ]] && assume_yes=true
+
+  local dir
+  dir=$(profile_dir "$profile")
+  [[ -d $dir ]] || {
+    echo "No profile data at $dir"
+    exit 0
+  }
+  if $assume_yes || gum confirm "Delete $dir ?"; then
+    rm -rf "$dir"
+    echo "Deleted $dir"
+  fi
+}
+
+cmd_dir() {
+  (($# == 1)) || {
+    usage >&2
+    exit 1
+  }
+  profile_dir "$1"
+}
+
+case ${1:-} in
+install) shift; cmd_install "$@" ;;
+launch) shift; cmd_launch "$@" ;;
+list) cmd_list ;;
+remove) shift; cmd_remove "$@" ;;
+purge) shift; cmd_purge "$@" ;;
+dir) shift; cmd_dir "$@" ;;
+-h | --help | help | "") usage ;;
+*)
+  echo "Unknown command: $1" >&2
+  usage >&2
+  exit 1
+  ;;
+esac

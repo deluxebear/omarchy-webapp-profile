@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# omarchy:summary=Interactive wizard: install a web app with its own profile directory
+# omarchy:args=
+
+# Menu/presentation entry point, mirroring omarchy-webapp-install naming:
+# Install → Web App (Multi-account) runs this in a themed floating terminal.
+exec omarchy-webapp-profile install "$@"
